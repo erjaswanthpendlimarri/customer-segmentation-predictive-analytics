@@ -1,0 +1,6 @@
+KPI,Formula,Rule / Exclusions
+Gross sales,"SUM(quantity * unit_price)","Before discounts and returns; cancelled orders excluded"
+Net sales,"Gross sales - discounts - return amounts","Missing discount/return amounts treated as zero; line-level rupee amounts assumed"
+Eligible order count,"COUNT(DISTINCT order_id)","Orders with items; statuses Cancelled and Canceled excluded"
+Average order value,"Net sales / eligible order count","Returns are deducted if return_amount is available"
+Monthly revenue growth,"(Current month net sales - previous month net sales) / previous month net sales * 100","Undefined when previous month revenue is zero"

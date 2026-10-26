@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#080d1b">
+
+    <title>MarketPulse | E-Commerce Intelligence</title>
+    <meta name="description" content="MarketPulse e-commerce business intelligence dashboard with sales analytics and customer segmentation.">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ==================================================
+           SALES OVERVIEW CARDS
+        ================================================== */
+        .sales-overview {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 18px;
+            width: 100%;
+            margin-top: 28px;
+        }
+
+        .sales-card {
+            position: relative;
+            min-width: 0;
+            overflow: hidden;
+            padding: 22px;
+            border: 1px solid rgba(148, 163, 184, .22);
+            border-radius: 20px;
+            background: linear-gradient(
+                145deg,
+                rgba(30, 41, 75, .94),
+                rgba(12, 18, 36, .97)
+            );
+            box-shadow: 0 10px 35px rgba(0, 0, 0, .22);
+            transition: transform .3s ease, border-color .3s ease,
+                        box-shadow .3s ease;
+            animation: cardAppear .65s ease both;
+        }
+
+        .sales-card:nth-child(2) { animation-delay: .08s; }
+        .sales-card:nth-child(3) { animation-delay: .16s; }
+        .sales-card:nth-child(4) { animation-delay: .24s; }
+
+        .sales-card::before {
+            content: "";
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            top: -90px;
+            right: -70px;
+            border-radius: 50%;
+            background: var(--card-glow, rgba(34, 211, 238, .2));
+            filter: blur(28px);
+            pointer-events: none;
+        }
+
+        .sales-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(34, 211, 238, .5);
+            box-shadow: 0 15px 40px rgba(34, 211, 238, .12);
+        }
+
+        .sales-card-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .sales-card-heading h3 {
+            margin: 0;
+            color: #cbd5e1;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .5px;
+        }
+
+        .sales-web-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 46px;
+            height: 46px;
+            flex-shrink: 0;
+            border-radius: 15px;
+            font-size: 21px;
+            transition: transform .3s ease;
+        }
+
+        .sales-card:hover .sales-web-icon {
+            transform: scale(1.12) rotate(-6deg);
+        }
+
+        .revenue-icon {
+            --card-glow: rgba(53, 230, 208, .25);
+            color: #35e6d0;
+            background: rgba(53, 230, 208, .13);
+            box-shadow: 0 0 22px rgba(53, 230, 208, .1);
+        }
+
+        .orders-icon {
+            --card-glow: rgba(185, 154, 255, .25);
+            color: #b99aff;
+            background: rgba(185, 154, 255, .13);
+            box-shadow: 0 0 22px rgba(185, 154, 255, .1);
+        }
+
+        .aov-icon {
+            --card-glow: rgba(255, 196, 107, .25);
+            color: #ffc46b;
+            background: rgba(255, 196, 107, .13);
+            box-shadow: 0 0 22px rgba(255, 196, 107, .1);
+        }
+
+        .net-sales-icon {
+            --card-glow: rgba(100, 229, 154, .25);
+            color: #64e59a;
+            background: rgba(100, 229, 154, .13);
+            box-shadow: 0 0 22px rgba(100, 229, 154, .1);
+        }
+
+        .sales-card h2 {
+            position: relative;
+            margin: 0;
+            color: #f8fafc;
+            font-size: clamp(21px, 2vw, 29px);
+            font-weight: 750;
+            overflow-wrap: anywhere;
+        }
+
+        .sales-card-caption {
+            margin: 12px 0 0;
+            color: #929fbd;
+            font-size: 11px;
+            line-height: 1.6;
+        }
+
+        @keyframes cardAppear {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ==================================================
+           ICONS AND INTERACTION
+        ================================================== */
+        .sidebar-nav .nav-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 25px;
+            color: #a78bfa;
+            font-size: 16px;
+            transition: color .25s ease, transform .25s ease;
+        }
+
+        .sidebar-nav .nav-item:hover .nav-icon,
+        .sidebar-nav .nav-item.active .nav-icon {
+            color: #22d3ee;
+            transform: scale(1.12);
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-dot,
+        .status-dot,
+        .updated-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            background: #34d399;
+            box-shadow: 0 0 12px rgba(52, 211, 153, .7);
+        }
+
+        .live-dot {
+            animation: livePulse 1.7s infinite;
+        }
+
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .4; }
+        }
+
+        .sales-card,
+        .kpi-card,
+        .panel,
+        .customer-metric-card,
+        .definition-card {
+            backdrop-filter: blur(12px);
+        }
+
+        .chart-image {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+        }
+
+        .chart-image-wrap {
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .customer-chart-wrap {
+            position: relative;
+            width: 100%;
+            min-width: 0;
+            height: 300px;
+        }
+
+        .table-scroll {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 13px 15px;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .data-table th {
+            color: #a5b4d0;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+        }
+
+        .data-table td {
+            color: #e2e8f0;
+            font-size: 13px;
+            border-top: 1px solid rgba(148, 163, 184, .12);
+        }
+
+        .empty-state {
+            padding: 24px !important;
+            color: #94a3b8 !important;
+            text-align: center !important;
+        }
+
+        .error-message {
+            margin: 15px 0;
+            padding: 14px 16px;
+            color: #fecaca;
+            background: rgba(239, 68, 68, .1);
+            border: 1px solid rgba(248, 113, 113, .35);
+            border-radius: 12px;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        /* ==================================================
+           RESPONSIVE LAYOUT
+        ================================================== */
+        @media (max-width: 1100px) {
+            .sales-overview {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 850px) {
+            .main {
+                margin-left: 0 !important;
+                padding: 20px !important;
+            }
+
+            .sales-overview {
+                gap: 12px;
+            }
+
+            .topbar {
+                flex-wrap: wrap;
+                gap: 20px;
+            }
+
+            .topbar-actions {
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .sales-overview {
+                grid-template-columns: 1fr;
+            }
+
+            .sales-card {
+                padding: 18px;
+            }
+
+            .customer-chart-wrap {
+                height: 260px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: .01ms !important;
+                animation-iteration-count: 1 !important;
+                scroll-behavior: auto !important;
+                transition-duration: .01ms !important;
+            }
+        }
+        
+/* AI Business Intelligence connection cards */
+.ai-connections {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 20px 0 26px;
+}
+
+.ai-connection {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid rgba(34, 211, 238, 0.22);
+    border-radius: 14px;
+    background: linear-gradient(
+        135deg,
+        rgba(30, 41, 75, 0.8),
+        rgba(15, 23, 42, 0.95)
+    );
+    color: #e2e8f0;
+    text-decoration: none;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    transition: transform 0.25s, border-color 0.25s,
+                box-shadow 0.25s;
+}
+
+.ai-connection > i:first-child {
+    color: #22d3ee;
+    font-size: 21px;
+    flex-shrink: 0;
+}
+
+.ai-connection > span {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.ai-connection strong {
+    color: #f8fafc;
+    font-size: 13px;
+}
+
+.ai-connection small {
+    color: #94a3b8;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.ai-connection > i:last-child {
+    color: #a78bfa;
+    font-size: 13px;
+}
+
+.ai-connection:hover {
+    transform: translateY(-3px);
+    border-color: #22d3ee;
+    box-shadow: 0 8px 24px rgba(34, 211, 238, 0.12);
+}
+
+.ai-connection:focus-visible {
+    outline: 2px solid #22d3ee;
+    outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+    .ai-connections {
+        grid-template-columns: 1fr;
+    }
+}
+
+    </style>
+</head>
+
+<body>
+<div class="app-shell">
+
+    <!-- Animated background -->
+    <div class="ambient-background" aria-hidden="true">
+        <div class="ambient-orb orb-one"></div>
+        <div class="ambient-orb orb-two"></div>
+        <div class="ambient-orb orb-three"></div>
+        <div class="ambient-grid"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">M</div>
+            <div class="brand-copy">
+                <h2>MarketPulse</h2>
+                <span>COMMERCE INTELLIGENCE</span>
+            </div>
+        </div>
+
+        <div class="sidebar-section-label">WORKSPACE</div>
+
+        <nav class="sidebar-nav" aria-label="Main navigation">
+            <a class="nav-item active" href="#overview">
+                <span class="nav-icon"><i class="fa-solid fa-house"></i></span>
+                <span>Overview</span>
+                <span class="nav-indicator"></span>
+            </a>
+
+            <a class="nav-item" href="#sales-analytics">
+                <span class="nav-icon"><i class="fa-solid fa-chart-column"></i></span>
+                <span>Sales Analytics</span>
+            </a>
+
+            <a class="nav-item" href="#category-analysis">
+                <span class="nav-icon"><i class="fa-solid fa-layer-group"></i></span>
+                <span>Categories</span>
+            </a>
+
+            <a class="nav-item" href="#regional-analysis">
+                <span class="nav-icon"><i class="fa-solid fa-earth-asia"></i></span>
+                <span>Regional Insights</span>
+            </a>
+
+            <a class="nav-item" href="#advanced-analytics">
+                <span class="nav-icon"><i class="fa-solid fa-chart-pie"></i></span>
+                <span>Advanced Analytics</span>
+            </a>
+
+            <a class="nav-item" href="#customer-intelligence">
+                <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
+                <span>Customer Intelligence</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-section-label">SYSTEM</div>
+
+        <div class="system-status">
+            <span class="status-dot"></span>
+            <div>
+                <strong>Database Status</strong>
+                <small id="db-status">Checking connection...</small>
+            </div>
+        </div>
+
+        <div class="sidebar-bottom">
+            <div class="sidebar-profile-avatar">MP</div>
+            <div class="sidebar-profile-text">
+                <strong>Analytics Workspace</strong>
+                <small>Business Intelligence</small>
+            </div>
+            <span class="profile-menu-icon">•••</span>
+        </div>
+    </aside>
+
+    <!-- Main dashboard -->
+    <main class="main">
+
+        <!-- Header -->
+        <header class="topbar">
+            <div class="topbar-heading">
+                <div class="breadcrumb">Workspace <span>/</span> Dashboard</div>
+                <h1>Business Overview</h1>
+                <p>Explore your sales performance and customer behavior.</p>
+            </div>
+
+            <div class="topbar-actions">
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    LIVE ANALYTICS
+                </div>
+
+                <button id="refresh" class="btn btn-secondary" type="button">
+                    <span class="button-icon">↻</span>
+                    Refresh
+                </button>
+
+                <div class="topbar-avatar">MP</div>
+            </div>
+        </header>
+
+        <!-- Four colourful sales cards -->
+        <section class="sales-overview" aria-label="Sales overview">
+
+            <article class="sales-card">
+                <div class="sales-card-heading">
+                    <h3>Total Revenue</h3>
+                    <div class="sales-web-icon revenue-icon">
+                        <i class="fa-solid fa-sack-dollar"></i>
+                    </div>
+                </div>
+                <h2 id="explore-revenue">₹0.00</h2>
+                <p class="sales-card-caption">Overall business revenue</p>
+            </article>
+
+            <article class="sales-card">
+                <div class="sales-card-heading">
+                    <h3>Total Orders</h3>
+                    <div class="sales-web-icon orders-icon">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                    </div>
+                </div>
+                <h2 id="explore-orders">0</h2>
+                <p class="sales-card-caption">Orders received</p>
+            </article>
+
+            <article class="sales-card">
+                <div class="sales-card-heading">
+                    <h3>Average Order Value</h3>
+                    <div class="sales-web-icon aov-icon">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                </div>
+                <h2 id="explore-aov">₹0.00</h2>
+                <p class="sales-card-caption">Average revenue per order</p>
+            </article>
+
+            <article class="sales-card">
+                <div class="sales-card-heading">
+                    <h3>Net Sales</h3>
+                    <div class="sales-web-icon net-sales-icon">
+                        <i class="fa-solid fa-money-bill-trend-up"></i>
+                    </div>
+                </div>
+                <h2 id="explore-net-sales">₹0.00</h2>
+                <p class="sales-card-caption">Revenue after adjustments</p>
+            </article>
+
+        </section>
+
+        <!-- Report filters -->
+        <section class="filter-bar" aria-label="Dashboard filters">
+            <div class="filter-heading">
+                <span class="filter-icon">▤</span>
+                <div>
+                    <strong>Report Filters</strong>
+                    <small>Customize your reporting period</small>
+                </div>
+            </div>
+
+            <div class="filter-control">
+                <label for="start">Start date</label>
+                <input type="date" id="start">
+            </div>
+
+            <div class="filter-control">
+                <label for="end">End date</label>
+                <input type="date" id="end">
+            </div>
+
+            <button id="apply" class="btn btn-primary" type="button">
+                Apply Filters <span>→</span>
+            </button>
+
+            <div class="last-updated">
+                <span class="updated-dot"></span>
+                <span id="updated">Loading data...</span>
+            </div>
+        </section>
+
+        <!-- Performance snapshot -->
+        <section id="overview" class="dashboard-section">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">PERFORMANCE SNAPSHOT</div>
+                    <h2>Sales at a glance</h2>
+                    <p>Your business performance across the selected period.</p>
+                </div>
+                <div class="section-badge">
+                    <span class="section-badge-icon">✦</span>
+                    Real-time overview
+                </div>
+            </div>
+
+            <div class="kpi-grid">
+                <article class="kpi-card kpi-purple">
+                    <div class="kpi-head">
+                        <span class="kpi-label">Gross Sales</span>
+                        <span class="kpi-icon">₹</span>
+                    </div>
+                    <div id="gross" class="kpi-value">₹0.00</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-trend">↗</span>
+                        <span class="kpi-note">Before discounts and returns</span>
+                    </div>
+                    <div class="kpi-decoration"></div>
+                </article>
+
+                <article class="kpi-card kpi-cyan">
+                    <div class="kpi-head">
+                        <span class="kpi-label">Net Sales</span>
+                        <span class="kpi-icon">↗</span>
+                    </div>
+                    <div id="net" class="kpi-value">₹0.00</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-trend">◆</span>
+                        <span class="kpi-note">After discounts and returns</span>
+                    </div>
+                    <div class="kpi-decoration"></div>
+                </article>
+
+                <article class="kpi-card kpi-blue">
+                    <div class="kpi-head">
+                        <span class="kpi-label">Completed Sales Orders</span>
+                        <span class="kpi-icon">▤</span>
+                    </div>
+                    <div id="orders" class="kpi-value">0</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-trend">✓</span>
+                        <span class="kpi-note">Unique eligible orders</span>
+                    </div>
+                    <div class="kpi-decoration"></div>
+                </article>
+
+                <article class="kpi-card kpi-pink">
+                    <div class="kpi-head">
+                        <span class="kpi-label">Average Order Value</span>
+                        <span class="kpi-icon">◎</span>
+                    </div>
+                    <div id="aov" class="kpi-value">₹0.00</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-trend">↗</span>
+                        <span class="kpi-note">Net sales per order</span>
+                    </div>
+                    <div class="kpi-decoration"></div>
+                </article>
+            </div>
+
+            <div class="insight-strip">
+                <div class="insight-symbol">✧</div>
+                <div class="insight-content">
+                    <strong>Revenue Growth Insight</strong>
+                    <p id="growth">Your monthly revenue comparison will appear here.</p>
+                </div>
+                <div class="insight-tag">MONTHLY TREND</div>
+            </div>
+        </section>
+
+        <!-- Sales analytics -->
+        <section id="sales-analytics" class="dashboard-section">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">SALES INTELLIGENCE</div>
+                    <h2>Explore your sales</h2>
+                    <p>Track revenue trends and understand where sales come from.</p>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <article class="panel chart-panel chart-panel-wide">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-overline">REVENUE PERFORMANCE</span>
+                            <h3>Monthly Revenue Trend</h3>
+                            <p>Net sales grouped by calendar month</p>
+                        </div>
+                        <span class="panel-icon purple-icon">⌁</span>
+                    </div>
+                    <div class="chart-image-wrap">
+                        <img id="monthly-chart" class="chart-image"
+                             src="{{ url_for('chart', chart_type='monthly') }}"
+                             alt="Monthly revenue trend chart">
+                    </div>
+                    <div class="chart-caption">
+                        <span class="caption-dot purple-dot"></span>
+                        Monthly net sales
+                    </div>
+                </article>
+
+                <article id="category-analysis" class="panel chart-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-overline">PRODUCT PERFORMANCE</span>
+                            <h3>Category Revenue</h3>
+                            <p>Sales contribution by category</p>
+                        </div>
+                        <span class="panel-icon cyan-icon">▦</span>
+                    </div>
+                    <div class="chart-image-wrap">
+                        <img id="category-chart" class="chart-image"
+                             src="{{ url_for('chart', chart_type='category') }}"
+                             alt="Net sales by product category">
+                    </div>
+                    <div class="chart-caption">
+                        <span class="caption-dot cyan-dot"></span>
+                        Category net sales
+                    </div>
+                </article>
+
+                <article id="regional-analysis" class="panel chart-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-overline">GEOGRAPHIC PERFORMANCE</span>
+                            <h3>Regional Revenue</h3>
+                            <p>Compare sales across regions</p>
+                        </div>
+                        <span class="panel-icon blue-icon">◎</span>
+                    </div>
+                    <div class="chart-image-wrap">
+                        <img id="region-chart" class="chart-image"
+                             src="{{ url_for('chart', chart_type='region') }}"
+                             alt="Net sales by region">
+                    </div>
+                    <div class="chart-caption">
+                        <span class="caption-dot blue-dot"></span>
+                        Regional net sales
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Advanced analytics -->
+        <section id="advanced-analytics" class="dashboard-section">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">ADVANCED BUSINESS INTELLIGENCE</div>
+                    <h2>Advanced Sales Analytics</h2>
+                    <p>Analyze daily sales, top products, categories, and regional performance.</p>
+                </div>
+                <span class="section-badge">DATE-FILTERED REPORT</span>
+            </div>
+
+            <div class="insight-strip" role="status">
+                <div class="insight-symbol">✦</div>
+                <div class="insight-content">
+                    <strong>Analytics Report</strong>
+                    <p id="analytics-message">Loading advanced analytics...</p>
+                </div>
+            </div>
+            <span id="analytics-status" hidden></span>
+
+            <div class="charts-grid">
+                <article class="panel chart-panel chart-panel-wide">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-overline">DAILY PERFORMANCE</span>
+                            <h3>Daily Sales Trend</h3>
+                            <p>Gross and net sales for each day</p>
+                        </div>
+                        <span class="panel-icon purple-icon">⌁</span>
+                    </div>
+                    <div class="customer-chart-wrap">
+                        <canvas id="daily-sales-chart" aria-label="Daily sales trend chart"></canvas>
+                    </div>
+                </article>
+
+                <article class="panel chart-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-overline">TOP PERFORMERS</span>
+                            <h3>Top Products</h3>
+                            <p>Ranked by net sales</p>
+                        </div>
+                        <span class="panel-icon cyan-icon">▥</span>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>Product</th><th>Units</th><th>Net Sales</th></tr>
+                            </thead>
+                            <tbody id="top-products-table">
+                                <tr><td colspan="3" class="empty-state">Loading products...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            </div>
+
+            <div class="charts-grid">
+                <article class="panel table-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-overline">CATEGORY INTELLIGENCE</span>
+                            <h3>Category Performance</h3>
+                            <p>Revenue and order performance</p>
+                        </div>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>Category</th><th>Units</th><th>Orders</th><th>Net Sales</th></tr>
+                            </thead>
+                            <tbody id="analytics-category-table">
+                                <tr><td colspan="4" class="empty-state">Loading categories...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+
+                <article class="panel table-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-overline">REGIONAL INTELLIGENCE</span>
+                            <h3>Regional Performance</h3>
+                            <p>Compare revenue across locations</p>
+                        </div>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>Region</th><th>Orders</th><th>Net Sales</th></tr>
+                            </thead>
+                            <tbody id="analytics-region-table">
+                                <tr><td colspan="3" class="empty-state">Loading regions...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Category breakdown -->
+        <section class="dashboard-section">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">PRODUCT BREAKDOWN</div>
+                    <h2>Category performance</h2>
+                    <p>Review the contribution of each product category.</p>
+                </div>
+            </div>
+
+            <article class="panel table-panel">
+                <div class="panel-heading">
+                    <div>
+                        <h3>Net Sales by Category</h3>
+                        <p>Ranked from highest to lowest revenue</p>
+                    </div>
+                    <span class="panel-icon purple-icon">▤</span>
+                </div>
+                <div class="table-scroll">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Product Category</th><th>Net Revenue</th><th>Contribution</th></tr>
+                        </thead>
+                        <tbody id="category-table">
+                            <tr><td colspan="3" class="empty-state">Loading category performance...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+
+        <!-- Customer intelligence -->
+        <section id="customer-intelligence" class="dashboard-section">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">CUSTOMER INTELLIGENCE</div>
+                    <h2>Understand your customers</h2>
+                    <p>Explore customer value, purchasing patterns, and segmentation.</p>
+                </div>
+                <button id="load-customers" class="btn btn-secondary" type="button">
+                    <span class="button-icon">↻</span>
+                    Refresh Customers
+                </button>
+            </div>
+
+            <div class="customer-metrics-grid">
+                <article class="customer-metric-card">
+                    <div class="customer-metric-icon metric-purple">♙</div>
+                    <div>
+                        <span>Total Customers</span>
+                        <strong id="customer-total">0</strong>
+                        <small>Customers analyzed</small>
+                    </div>
+                </article>
+
+                <article class="customer-metric-card">
+                    <div class="customer-metric-icon metric-orange">⚑</div>
+                    <div>
+                        <span>Customers at Risk</span>
+                        <strong id="customer-risk">0</strong>
+                        <small>Require attention</small>
+                    </div>
+                </article>
+
+                <article class="customer-metric-card">
+                    <div class="customer-metric-icon metric-green">✦</div>
+                    <div>
+                        <span>Loyal Customers</span>
+                        <strong id="customer-loyal">0</strong>
+                        <small>Repeat buyers</small>
+                    </div>
+                </article>
+
+                <article class="customer-metric-card">
+                    <div class="customer-metric-icon metric-cyan">₹</div>
+                    <div>
+                        <span>Customer Spending</span>
+                        <strong id="customer-spending">₹0.00</strong>
+                        <small>Total net spending</small>
+                    </div>
+                </article>
+            </div>
+
+            <div class="customer-summary-panel">
+                <div class="summary-icon">✧</div>
+                <div>
+                    <strong>Customer Segmentation Summary</strong>
+                    <p id="customer-summary">Customer segmentation results will appear here.</p>
+                </div>
+            </div>
+
+            <div id="customer-error" class="error-message" role="alert" hidden></div>
+
+            <div class="customer-charts-grid">
+                <article class="panel customer-chart-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-overline">CUSTOMER DISTRIBUTION</span>
+                            <h3>Customer Segments</h3>
+                            <p>Distribution of customers by segment</p>
+                        </div>
+                        <span class="panel-icon purple-icon">◉</span>
+                    </div>
+                    <div class="customer-chart-wrap">
+                        <canvas id="segment-chart" aria-label="Customer segment distribution chart"></canvas>
+                    </div>
+                </article>
+
+                <article class="panel customer-chart-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-overline">CUSTOMER VALUE</span>
+                            <h3>Customer Spending</h3>
+                            <p>Net spending by customer</p>
+                        </div>
+                        <span class="panel-icon cyan-icon">▥</span>
+                    </div>
+                    <div class="customer-chart-wrap">
+                        <canvas id="spending-chart" aria-label="Customer spending chart"></canvas>
+                    </div>
+                </article>
+            </div>
+
+            <article class="panel table-panel customer-table-panel">
+                <div class="panel-heading">
+                    <div>
+                        <span class="panel-overline">CUSTOMER OVERVIEW</span>
+                        <h3>Customer Segmentation Details</h3>
+                        <p>Review customer activity and spending</p>
+                    </div>
+                    <span class="panel-icon blue-icon">▤</span>
+                </div>
+
+                <div class="table-scroll">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Customer ID</th>
+                                <th>Customer Name</th>
+                                <th>Region</th>
+                                <th>Recency (Days)</th>
+                                <th>Orders</th>
+                                <th>Net Spending</th>
+                                <th>Segment</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customer-table">
+                            <tr><td colspan="7" class="empty-state">Loading customer data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+
+        <!-- Metric definitions -->
+        <section class="dashboard-section">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">METRIC GUIDE</div>
+                    <h2>Understand the numbers</h2>
+                    <p>Definitions used in this dashboard.</p>
+                </div>
+            </div>
+
+            <div class="definition-grid">
+                <article class="definition-card">
+                    <span class="definition-symbol purple-icon">₹</span>
+                    <h3>Gross Sales</h3>
+                    <p>Quantity multiplied by unit price before discounts and returns.</p>
+                </article>
+
+                <article class="definition-card">
+                    <span class="definition-symbol cyan-icon">↗</span>
+                    <h3>Net Sales</h3>
+                    <p>Gross sales minus recorded discounts and returns.</p>
+                </article>
+
+                <article class="definition-card">
+                    <span class="definition-symbol blue-icon">▤</span>
+                    <h3>Average Order Value</h3>
+                    <p>Net sales divided by the number of eligible unique orders.</p>
+                </article>
+
+                <article class="definition-card">
+                    <span class="definition-symbol pink-icon">♙</span>
+                    <h3>Customer Segments</h3>
+                    <p>Groups based on available customer recency, order frequency, and spending.</p>
+                </article>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <div class="footer-brand">
+                <span class="footer-logo">M</span>
+                <span>MarketPulse</span>
+            </div>
+            <p>E-Commerce Business Intelligence Dashboard</p>
+            <span class="footer-version">DEMO EDITION · 2026</span>
+        </footer>
+
+    </main>
+</div>
+
+<!-- Customer intelligence charts and table -->
+<script>
+"use strict";
+
+let segmentChart = null;
+let spendingChart = null;
+
+async function loadCustomerGraphs() {
+    const errorBox = document.getElementById("customer-error");
+    const button = document.getElementById("load-customers");
+
+    if (button) button.disabled = true;
+
+    try {
+        const response = await fetch(
+            "/api/ml-customer-segments?v=" + Date.now(),
+            { cache: "no-store" }
+        );
+
+        if (!response.ok) {
+            throw new Error("Customer API returned HTTP " + response.status);
+        }
+
+        const data = await response.json();
+
+        if (data.success === false) {
+            throw new Error(data.message || "Unable to load customer data.");
+        }
+
+        const customers = data.customers || [];
+        const segmentCounts = {};
+
+        customers.forEach(customer => {
+            const segment = customer.segment || "Unclassified";
+            segmentCounts[segment] = (segmentCounts[segment] || 0) + 1;
+        });
+
+        const moneyFormat = value => new Intl.NumberFormat("en-IN", {
+            style: "currency",
+            currency: "INR",
+            maximumFractionDigits: 2
+        }).format(Number(value) || 0);
+
+        const setText = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        };
+
+        const segmentCanvas = document.getElementById("segment-chart");
+        const spendingCanvas = document.getElementById("spending-chart");
+
+        if (segmentChart) {
+            segmentChart.destroy();
+            segmentChart = null;
+        }
+
+        if (spendingChart) {
+            spendingChart.destroy();
+            spendingChart = null;
+        }
+
+        if (segmentCanvas) {
+            segmentChart = new Chart(segmentCanvas, {
+                type: "doughnut",
+                data: {
+                    labels: Object.keys(segmentCounts),
+                    datasets: [{
+                        data: Object.values(segmentCounts),
+                        backgroundColor: [
+                            "#a78bfa", "#22d3ee", "#60a5fa",
+                            "#fb7185", "#34d399", "#fbbf24"
+                        ],
+                        borderColor: "#111827",
+                        borderWidth: 4,
+                        hoverOffset: 12
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "66%",
+                    animation: {
+                        animateRotate: true,
+                        duration: 1000
+                    },
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                color: "#cbd5e1",
+                                padding: 18,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        const sortedCustomers = [...customers].sort(
+            (a, b) => Number(b.monetary || 0) - Number(a.monetary || 0)
+        );
+
+        if (spendingCanvas) {
+            spendingChart = new Chart(spendingCanvas, {
+                type: "bar",
+                data: {
+                    labels: sortedCustomers.map(
+                        customer => customer.customer_name ||
+                            ("Customer " + (customer.customer_id ?? ""))
+                    ),
+                    datasets: [{
+                        label: "Net Spending (₹)",
+                        data: sortedCustomers.map(
+                            customer => Number(customer.monetary || 0)
+                        ),
+                        backgroundColor: sortedCustomers.map((_, index) =>
+                            ["#a78bfa", "#22d3ee", "#60a5fa",
+                             "#34d399", "#fb7185"][index % 5]
+                        ),
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        maxBarThickness: 28
+                    }]
+                },
+                options: {
+                    indexAxis: "y",
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                color: "rgba(148,163,184,0.12)"
+                            },
+                            ticks: {
+                                color: "#94a3b8",
+                                callback: value => "₹" + value
+                            }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: "#cbd5e1" }
+                        }
+                    }
+                }
+            });
+        }
+
+        const riskCustomers = customers.filter(customer =>
+            /risk|inactive|lost|churn/i.test(customer.segment || "")
+        );
+
+        const loyalCustomers = customers.filter(customer =>
+            /loyal|regular|champion|repeat/i.test(customer.segment || "")
+        );
+
+        const totalSpending = customers.reduce(
+            (sum, customer) => sum + Number(customer.monetary || 0), 0
+        );
+
+        setText("customer-total", customers.length);
+        setText("customer-risk", riskCustomers.length);
+        setText("customer-loyal", loyalCustomers.length);
+        setText("customer-spending", moneyFormat(totalSpending));
+
+        setText(
+            "customer-summary",
+            customers.length
+                ? `${customers.length} customers analyzed across ${Object.keys(segmentCounts).length} segments. Total recorded customer spending: ${moneyFormat(totalSpending)}.`
+                : "No customer records were returned for analysis."
+        );
+
+        const table = document.getElementById("customer-table");
+
+        if (table) {
+            table.replaceChildren();
+
+            if (customers.length === 0) {
+                const row = table.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 7;
+                cell.className = "empty-state";
+                cell.textContent = "No customer data available.";
+            } else {
+                customers.forEach(customer => {
+                    const row = table.insertRow();
+
+                    const values = [
+                        customer.customer_id ?? "—",
+                        customer.customer_name ?? "—",
+                        customer.region ?? "—",
+                        customer.recency ?? customer.recency_days ?? "—",
+                        customer.frequency ?? customer.order_count ?? customer.orders ?? "—",
+                        moneyFormat(customer.monetary ?? 0),
+                        customer.segment ?? "Unclassified"
+                    ];
+
+                    values.forEach(value => {
+                        const cell = row.insertCell();
+                        cell.textContent = String(value);
+                    });
+                });
+            }
+        }
+
+        if (errorBox) {
+            errorBox.hidden = true;
+            errorBox.textContent = "";
+        }
+
+    } catch (error) {
+        console.error("Customer intelligence error:", error);
+
+        if (errorBox) {
+            errorBox.textContent =
+                "Customer data could not be loaded. Check the Flask server and customer API.";
+            errorBox.hidden = false;
+        }
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    loadCustomerGraphs();
+
+    const button = document.getElementById("load-customers");
+
+    if (button) {
+        button.addEventListener("click", loadCustomerGraphs);
+    }
+    
+const assistantButton = document.getElementById("open-ai-assistant");
+
+if (assistantButton) {
+    assistantButton.addEventListener("click", function () {
+        alert(
+            "AI Business Assistant is connected to the dashboard UI! " +
+            "Next, we will connect it to your Flask API and business data."
+        );
+    });
+}
+
+});
+
+window.loadCustomerGraphs = loadCustomerGraphs;
+</script>
+
+<!-- Keep your existing dashboard JavaScript -->
+<script src="{{ url_for('static', filename='app.js') }}" defer></script>
+
+
+<section class="chart-panel" id="ai-business-intelligence"
+         style="margin: 28px 0; padding: 24px; border: 1px solid #334155;
+                border-radius: 18px; background: rgba(15, 23, 42, 0.92);
+                color: #e2e8f0;">
+    <div style="display:flex; justify-content:space-between;
+                align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+            <p style="color:#22d3ee; letter-spacing:2px; font-size:12px;">
+                AI-POWERED ANALYTICS
+            </p>
+            <h2 style="margin:8px 0;">MarketPulse Intelligence</h2>
+            <p style="color:#94a3b8;">
+                Data-driven insights from your recorded sales.
+            </p>
+        </div>
+        <button id="ai-refresh" type="button"
+                style="padding:10px 16px; border:0; border-radius:9px;
+                       background:#0891b2; color:white; cursor:pointer;">
+            ↻ Refresh Insights
+        </button>
+    </div>
+
+   
+<p id="ai-status" role="status" style="color:#94a3b8;">
+    Loading business insights...
+</p>
+
+<div class="ai-connections" aria-label="AI analytics connections">
+
+    <a class="ai-connection" href="#sales-analytics">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>
+            <strong>Sales Analytics</strong>
+            <small>Revenue and sales trends</small>
+        </span>
+        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+    </a>
+
+    <a class="ai-connection" href="#advanced-analytics">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <span>
+            <strong>Product Analytics</strong>
+            <small>Top products and categories</small>
+        </span>
+        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+    </a>
+
+    <a class="ai-connection" href="#customer-intelligence">
+        <i class="fa-solid fa-users"></i>
+        <span>
+            <strong>Customer Intelligence</strong>
+            <small>Customer segments and spending</small>
+        </span>
+        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+    </a>
+
+    <button class="ai-connection" id="open-ai-assistant" type="button">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span>
+            <strong>AI Business Assistant</strong>
+            <small>Ask questions about your business</small>
+        </span>
+        <i class="fa-solid fa-comments"></i>
+    </button>
+
+</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+                gap:14px; margin:20px 0;">
+        <div style="padding:18px; border-radius:12px; background:#172554;">
+            <p style="color:#93c5fd;">Sales Trend</p>
+            <h3 id="ai-trend">—</h3>
+        </div>
+        <div style="padding:18px; border-radius:12px; background:#172554;">
+            <p style="color:#93c5fd;">Recent 7-Day Net Sales</p>
+            <h3 id="ai-recent-sales">—</h3>
+        </div>
+        <div style="padding:18px; border-radius:12px; background:#172554;">
+            <p style="color:#93c5fd;">Change vs Previous 7 Days</p>
+            <h3 id="ai-growth">—</h3>
+        </div>
+        <div style="padding:18px; border-radius:12px; background:#172554;">
+            <p style="color:#93c5fd;">Days Analyzed</p>
+            <h3 id="ai-days">—</h3>
+        </div>
+    </div>
+
+    <h3>Business Recommendations</h3>
+    <ul id="ai-recommendations" style="line-height:1.9;">
+        <li>Waiting for analysis...</li>
+    </ul>
+
+    <h3 style="margin-top:26px;">7-Day Sales Forecast</h3>
+    <p style="color:#94a3b8;">
+        Statistical estimates based on recent recorded daily net sales.
+    </p>
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr>
+                    <th style="text-align:left; padding:10px;">Date</th>
+                    <th style="text-align:right; padding:10px;">Estimated Net Sales</th>
+                </tr>
+            </thead>
+            <tbody id="ai-forecast-table">
+                <tr><td colspan="2" style="padding:10px;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3 style="margin-top:26px;">Unusual Sales Days</h3>
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr>
+                    <th style="text-align:left; padding:10px;">Date</th>
+                    <th style="text-align:left; padding:10px;">Detection</th>
+                    <th style="text-align:right; padding:10px;">Net Sales</th>
+                </tr>
+            </thead>
+            <tbody id="ai-anomalies-table">
+                <tr><td colspan="3" style="padding:10px;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3 style="margin-top:26px;">Top Products by Net Sales</h3>
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr>
+                    <th style="text-align:left; padding:10px;">Product</th>
+                    <th style="text-align:right; padding:10px;">Units</th>
+                    <th style="text-align:right; padding:10px;">Net Sales</th>
+                </tr>
+            </thead>
+            <tbody id="ai-products-table">
+                <tr><td colspan="3" style="padding:10px;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<script>
+(() => {
+    const byId = id => document.getElementById(id);
+
+    const money = value =>
+        Number(value || 0).toLocaleString("en-IN", {
+            style: "currency",
+            currency: "INR",
+            maximumFractionDigits: 2
+        });
+
+    const safe = value => String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+
+    async function loadAIInsights() {
+        byId("ai-status").textContent = "Analyzing database sales...";
+        byId("ai-refresh").disabled = true;
+
+        try {
+            const response = await fetch(
+                "/api/ai-insights?t=" + Date.now(),
+                { cache: "no-store" }
+            );
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "AI analysis failed.");
+            }
+
+            const s = data.summary || {};
+
+            byId("ai-trend").textContent = s.trend || "Insufficient history";
+            byId("ai-recent-sales").textContent =
+                money(s.recent_7_day_sales);
+
+            byId("ai-growth").textContent =
+                s.growth_percent == null
+                    ? "Not available"
+                    : (s.growth_percent > 0 ? "+" : "") +
+                      Number(s.growth_percent).toFixed(2) + "%";
+
+            byId("ai-days").textContent = s.days_analyzed ?? 0;
+
+            byId("ai-status").textContent =
+                "Analysis complete. Latest recorded sale date: " +
+                (s.latest_recorded_date || "not available") + ".";
+
+            const recommendations = data.recommendations || [];
+            byId("ai-recommendations").innerHTML =
+                recommendations.length
+                    ? recommendations.map(item =>
+                        "<li>" + safe(item) + "</li>"
+                      ).join("")
+                    : "<li>No recommendations available yet.</li>";
+
+            const forecast = data.forecast || [];
+            byId("ai-forecast-table").innerHTML =
+                forecast.length
+                    ? forecast.map(item =>
+                        "<tr><td style='padding:10px;'>" +
+                        safe(item.date) +
+                        "</td><td style='padding:10px;text-align:right;'>" +
+                        money(item.predicted_net_sales) +
+                        "</td></tr>"
+                      ).join("")
+                    : "<tr><td colspan='2' style='padding:10px;'>More daily sales history is needed for a forecast.</td></tr>";
+
+            const anomalies = data.anomalies || [];
+            byId("ai-anomalies-table").innerHTML =
+                anomalies.length
+                    ? anomalies.map(item =>
+                        "<tr><td style='padding:10px;'>" +
+                        safe(item.date) +
+                        "</td><td style='padding:10px;'>" +
+                        safe(item.type) +
+                        "</td><td style='padding:10px;text-align:right;'>" +
+                        money(item.net_sales) +
+                        "</td></tr>"
+                      ).join("")
+                    : "<tr><td colspan='3' style='padding:10px;'>No unusual sales days detected in the analyzed period.</td></tr>";
+
+            const products = data.top_products || [];
+            byId("ai-products-table").innerHTML =
+                products.length
+                    ? products.map(item =>
+                        "<tr><td style='padding:10px;'>" +
+                        safe(item.product_name) +
+                        "</td><td style='padding:10px;text-align:right;'>" +
+                        safe(item.units_sold) +
+                        "</td><td style='padding:10px;text-align:right;'>" +
+                        money(item.net_sales) +
+                        "</td></tr>"
+                      ).join("")
+                    : "<tr><td colspan='3' style='padding:10px;'>No product sales found.</td></tr>";
+
+        } catch (error) {
+            byId("ai-status").textContent =
+                "Unable to load insights: " + error.message;
+        } finally {
+            byId("ai-refresh").disabled = false;
+        }
+    }
+
+    byId("ai-refresh").addEventListener("click", loadAIInsights);
+    loadAIInsights();
+})();
+</script>
+
+
+<script>
+(function () {
+  const el = id => document.getElementById(id);
+  const money = n => Number(n || 0).toLocaleString("en-IN", {
+    style: "currency", currency: "INR", maximumFractionDigits: 2
+  });
+  const text = value => String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  }[c]));
+
+  async function loadInsights() {
+    el("ai-status").textContent = "Connecting to MarketPulse analytics...";
+    el("ai-refresh").disabled = true;
+    try {
+      const response = await fetch("/api/ai-insights?refresh=" + Date.now(), {
+        cache: "no-store"
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "AI API request failed");
+      }
+
+      const s = data.summary || {};
+      el("ai-trend").textContent = s.trend || "Insufficient history";
+      el("ai-recent-sales").textContent = money(s.recent_7_day_sales);
+      el("ai-growth").textContent = s.growth_percent == null
+        ? "Not available"
+        : (s.growth_percent > 0 ? "+" : "") +
+          Number(s.growth_percent).toFixed(2) + "%";
+      el("ai-days").textContent = s.days_analyzed ?? 0;
+      el("ai-status").textContent =
+        "Analysis complete. Latest recorded date: " +
+        (s.latest_recorded_date || "Not available");
+
+      const recommendations = data.recommendations || [];
+      el("ai-recommendations").innerHTML = recommendations.length
+        ? recommendations.map(v => "<li>" + text(v) + "</li>").join("")
+        : "<li>No recommendations available yet.</li>";
+
+      const forecast = data.forecast || [];
+      el("ai-forecast-table").innerHTML = forecast.length
+        ? forecast.map(v => "<tr><td>" + text(v.date) +
+          "</td><td>" + money(v.predicted_net_sales) + "</td></tr>").join("")
+        : '<tr><td colspan="2">Insufficient daily data for a forecast.</td></tr>';
+
+      const anomalies = data.anomalies || [];
+      el("ai-anomalies-table").innerHTML = anomalies.length
+        ? anomalies.map(v => "<tr><td>" + text(v.date) +
+          "</td><td>" + text(v.type) + "</td><td>" +
+          money(v.net_sales) + "</td></tr>").join("")
+        : '<tr><td colspan="3">No unusual sales days detected.</td></tr>';
+
+      const products = data.top_products || [];
+      el("ai-products-table").innerHTML = products.length
+        ? products.map(v => "<tr><td>" + text(v.product_name) +
+          "</td><td>" + text(v.units_sold) + "</td><td>" +
+          money(v.net_sales) + "</td></tr>").join("")
+        : '<tr><td colspan="3">No product records found.</td></tr>';
+
+    } catch (error) {
+      el("ai-status").textContent = "Could not load AI insights: " + error.message;
+    } finally {
+      el("ai-refresh").disabled = false;
+    }
+  }
+
+  el("ai-refresh").addEventListener("click", loadInsights);
+  loadInsights();
+})();
+</script>
+
+</body>
+</html>
